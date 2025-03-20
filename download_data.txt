@@ -1,0 +1,4 @@
+symbol = "^GSPC"  # S&P 500 ETF
+df = yf.download(symbol, start="1985-01-01")[['Open', 'Close']]
+df.columns = df.columns.droplevel(1)  # 移除代碼層級
+df.to_csv("SPY_historial_Mar_2025.csv")
