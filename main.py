@@ -135,7 +135,7 @@ index_options = {
     "S&P 500 (^GSPC)": "^GSPC",
     "Hang Seng Index (HSI)": "^HSI",
     "FTSE 100 (^FTSE)": "^FTSE",
-    "FTSE China A50 (XIN9.F)": "XIN9.F"
+    "DAX (^GDAXI)": "^GDAXI"
 }
 selected_index_name = st.sidebar.selectbox(
     "選擇指數",
@@ -149,7 +149,7 @@ selected_symbol = index_options[selected_index_name]
 df = load_data(selected_symbol, start_date="1990-01-01")
 
 # 用戶輸入：選擇起始年份
-start_year = st.slider(
+start_year = st.sidebar.slider(
     "選擇起始年份",
     min_value=df.index.min().year,
     max_value=2025,
@@ -174,7 +174,7 @@ st.plotly_chart(avg_chart, use_container_width=False)
 # 部分 2：特定月份的詳細回報分析
 st.subheader("特定月份的詳細回報分析")
 month_options = {calendar.month_name[i]: i for i in range(1, 13)}
-selected_month_name = st.selectbox(
+selected_month_name = st.sidebar.selectbox(
     "選擇月份",
     options=list(month_options.keys()),
     index=0,
