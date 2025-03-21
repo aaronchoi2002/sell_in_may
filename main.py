@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import calendar
+import yfinance as yf
 
 # --- 設定 ---
 SYMBOL = "S&P 500"  # 代表 S&P 500 ETF (SPY)
