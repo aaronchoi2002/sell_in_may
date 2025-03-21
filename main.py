@@ -4,30 +4,27 @@ import plotly.express as px
 import calendar
 import yfinance as yf
 
-# --- 設定 ---
-SYMBOL = "S&P 500"  # 代表 S&P 500 ETF (SPY)
-DATA_FILE = "SPY_historial_Mar_2025.csv"  # 歷史數據 CSV 文件路徑
-
 # --- 輔助函數 ---
-def load_data(file_path):
+def load_data(symbol, start_date="1990-01-01"):
     """
-    從 CSV 文件加載歷史股票數據，並將 'Date' 列設置為索引。
+    從 Yahoo Finance 下載歷史股票數據，並選擇 'Open' 和 'Close' 列。
     
     參數:
-        file_path (str): 包含股票數據的 CSV 文件路徑。
+        symbol (str): 股票或指數的代碼。
+        start_date (str): 數據的起始日期，格式為 'YYYY-MM-DD'。
     
     返回:
         pd.DataFrame: 帶有 'Date' 作為 datetime 索引的 DataFrame，或在錯誤時停止執行。
     """
     try:
-        df = pd.read_csv(file_path, index_col="Date")
-        df.index = pd.to_datetime(df.index, format="%Y-%m-%d")  # 確保日期格式正確
+        df = yf.download(symbol, start=start_date)[['Open', 'Close']]
+        if df.empty:
+            st.error(f"錯誤：無法獲取 '{symbol}' 的數據，請檢查代碼或網絡連接。")
+            st.stop()
+        df.columns = df.columns.droplevel(1)  # 移除多層索引中的代碼層級
         return df
-    except FileNotFoundError:
-        st.error(f"錯誤：未找到 '{file_path}'。請確認文件存在並位於正確路徑。")
-        st.stop()
-    except ValueError:
-        st.error("錯誤：CSV 文件中的日期格式無效。預期格式為 'YYYY-MM-DD'。")
+    except Exception as e:
+        st.error(f"錯誤：下載 '{symbol}' 數據時發生問題 - {str(e)}。")
         st.stop()
 
 def calculate_monthly_returns(df):
@@ -42,7 +39,7 @@ def calculate_monthly_returns(df):
     """
     monthly = df.resample("ME").agg({"Open": "first", "Close": "last"})
     monthly["Intra_Return"] = (monthly["Close"] / monthly["Open"]) - 1
-    return monthly["Intra_Return"] * 100  # 轉換為百分比以便解讀
+    return monthly["Intra_Return"] * 100  # 轉換為百分比
 
 def get_average_monthly_returns(monthly_returns):
     """
@@ -58,12 +55,13 @@ def get_average_monthly_returns(monthly_returns):
     month_names = [calendar.month_abbr[i] for i in range(1, 13)]
     return avg_returns.reindex(range(1, 13)).set_axis(month_names)
 
-def create_avg_returns_chart(avg_returns, start_year):
+def create_avg_returns_chart(avg_returns, symbol_name, start_year):
     """
     生成平均月度回報的互動式條形圖。
     
     參數:
         avg_returns (pd.Series): 每個月的平均回報。
+        symbol_name (str): 指數名稱。
         start_year (int): 數據範圍的起始年份。
     
     返回:
@@ -73,7 +71,7 @@ def create_avg_returns_chart(avg_returns, start_year):
         x=avg_returns.index,
         y=avg_returns.values,
         labels={"x": "月份", "y": "平均回報 (%)"},
-        title=f"{SYMBOL} 平均月度回報 ({start_year} 年至今)",
+        title=f"{symbol_name} 平均月度回報 ({start_year} 年至今)",
         text=avg_returns.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
@@ -81,23 +79,24 @@ def create_avg_returns_chart(avg_returns, start_year):
         width=900,
         height=500,
         title_font_size=20,
-        title_x=0.5,  # 標題居中
+        title_x=0.5,
         yaxis_tickformat=".2f"
     )
     return fig
 
-def create_monthly_detail_chart(monthly_returns, month_name, month_num, start_year):
+def create_monthly_detail_chart(monthly_returns, month_name, month_num, symbol_name, start_year):
     """
     創建顯示特定月份歷年回報的條形圖。
     
     參數:
         monthly_returns (pd.Series): 所有月度回報數據。
-        month_name (str): 選定月份的名稱（例如 'January'）。
+        month_name (str): 選定月份的名稱。
         month_num (int): 月份的數字表示（1-12）。
+        symbol_name (str): 指數名稱。
         start_year (int): 數據範圍的起始年份。
     
     返回:
-        plotly.graph_objs.Figure: 帶有平均線的條形圖，用於 Streamlit 顯示。
+        plotly.graph_objs.Figure: 帶有平均線的條形圖。
     """
     month_data = monthly_returns[monthly_returns.index.month == month_num]
     average_return = month_data.mean()
@@ -106,7 +105,7 @@ def create_monthly_detail_chart(monthly_returns, month_name, month_num, start_ye
         x=month_data.index.year,
         y=month_data.values,
         labels={"x": "年份", "y": f"{month_name} 回報 (%)"},
-        title=f"{SYMBOL} {month_name} 回報 ({start_year} 年至今)",
+        title=f"{symbol_name} {month_name} 回報 ({start_year} 年至今)",
         text=month_data.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
@@ -128,17 +127,26 @@ def create_monthly_detail_chart(monthly_returns, month_name, month_num, start_ye
     return fig
 
 # --- 主要應用程式 ---
-st.title("S&P 500 月度回報分析工具")
-st.markdown("此工具提供 S&P 500 的歷史月度表現分析，通過互動式圖表幫助用戶深入了解數據趨勢。")
+st.title("指數月度回報分析工具")
+st.markdown("此工具提供多個指數的歷史月度表現分析，通過互動式圖表幫助用戶深入了解數據趨勢。")
+
+# 側邊欄：指數選擇
+index_options = {
+    "S&P 500 (^GSPC)": "^GSPC",
+    "Hang Seng Index (HSI)": "^HSI",
+    "FTSE 100 (^FTSE)": "^FTSE",
+    "FTSE China A50 (XIN9.F)": "XIN9.F"
+}
+selected_index_name = st.sidebar.selectbox(
+    "選擇指數",
+    options=list(index_options.keys()),
+    index=0,
+    help="請從下拉列表中選擇要分析的指數。"
+)
+selected_symbol = index_options[selected_index_name]
 
 # 加載歷史數據
-# df = load_data(DATA_FILE)
-
-symbol = "^GSPC"  # S&P 500 ETF
-df = yf.download(symbol, start="1990-01-01")[['Open', 'Close']]
-
-df.columns = df.columns.droplevel(1)  # 移除代碼層級 ('^GSPC')
-
+df = load_data(selected_symbol, start_date="1990-01-01")
 
 # 用戶輸入：選擇起始年份
 start_year = st.slider(
@@ -160,7 +168,7 @@ monthly_returns = calculate_monthly_returns(df_filtered)
 # 部分 1：歷年平均月度回報
 st.subheader("歷年平均月度回報")
 avg_returns = get_average_monthly_returns(monthly_returns)
-avg_chart = create_avg_returns_chart(avg_returns, start_year)
+avg_chart = create_avg_returns_chart(avg_returns, selected_index_name, start_year)
 st.plotly_chart(avg_chart, use_container_width=False)
 
 # 部分 2：特定月份的詳細回報分析
@@ -179,10 +187,10 @@ month_data = monthly_returns[monthly_returns.index.month == selected_month]
 if month_data.empty:
     st.warning(f"所選範圍內 {selected_month_name} 無可用數據，請調整起始年份後重試。")
 else:
-    month_chart = create_monthly_detail_chart(monthly_returns, selected_month_name, selected_month, start_year)
+    month_chart = create_monthly_detail_chart(monthly_returns, selected_month_name, selected_month, selected_index_name, start_year)
     st.plotly_chart(month_chart, use_container_width=False)
 
-
+# 頁腳
 st.markdown(
     '<div style="text-align: center; font-size: 1.8em;">'
     'APP developed by <a href="https://www.4mstrategy.com/" target="_blank" rel="noopener noreferrer">4M Strategy</a>'
@@ -190,10 +198,9 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Separator
 st.markdown("---")
 
-# Define the disclaimer and source statement in Traditional Chinese
+# 免責聲明及資料來源
 disclaimer_text = """
 ### 投資免責聲明及資料來源聲明
 
@@ -206,6 +213,4 @@ disclaimer_text = """
 
 用戶應自行核實數據並進行獨立研究後再作出投資決定。
 """
-
-# Display the text using Streamlit's markdown function
 st.markdown(disclaimer_text)
