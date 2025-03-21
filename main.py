@@ -71,6 +71,7 @@ def create_avg_returns_chart(avg_returns, symbol_name, start_year):
         x=avg_returns.index,
         y=avg_returns.values,
         labels={"x": "月份", "y": "平均回報 (%)"},
+        title=f"{symbol_name} 平均月度回報 ({start_year} 年至今)",
         text=avg_returns.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
@@ -104,6 +105,7 @@ def create_monthly_detail_chart(monthly_returns, month_name, month_num, symbol_n
         x=month_data.index.year,
         y=month_data.values,
         labels={"x": "年份", "y": f"{month_name} 回報 (%)"},
+        title=f"{symbol_name} {month_name} 回報 ({start_year} 年至今)",
         text=month_data.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
@@ -147,7 +149,7 @@ selected_symbol = index_options[selected_index_name]
 df = load_data(selected_symbol, start_date="1990-01-01")
 
 # 用戶輸入：選擇起始年份
-start_year = st.sidebar.slider(
+start_year = st.slider(
     "選擇起始年份",
     min_value=df.index.min().year,
     max_value=2025,
@@ -172,7 +174,7 @@ st.plotly_chart(avg_chart, use_container_width=False)
 # 部分 2：特定月份的詳細回報分析
 st.subheader("特定月份的詳細回報分析")
 month_options = {calendar.month_name[i]: i for i in range(1, 13)}
-selected_month_name = st.sidebar.selectbox(
+selected_month_name = st.selectbox(
     "選擇月份",
     options=list(month_options.keys()),
     index=0,
