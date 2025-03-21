@@ -71,7 +71,6 @@ def create_avg_returns_chart(avg_returns, symbol_name, start_year):
         x=avg_returns.index,
         y=avg_returns.values,
         labels={"x": "月份", "y": "平均回報 (%)"},
-        title=f"{symbol_name} 平均月度回報 ({start_year} 年至今)",
         text=avg_returns.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
@@ -105,7 +104,6 @@ def create_monthly_detail_chart(monthly_returns, month_name, month_num, symbol_n
         x=month_data.index.year,
         y=month_data.values,
         labels={"x": "年份", "y": f"{month_name} 回報 (%)"},
-        title=f"{symbol_name} {month_name} 回報 ({start_year} 年至今)",
         text=month_data.round(2).astype(str) + "%"
     )
     fig.update_traces(textposition="outside", marker_color="skyblue")
