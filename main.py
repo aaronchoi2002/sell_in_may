@@ -135,7 +135,7 @@ st.markdown("此工具提供 S&P 500 的歷史月度表現分析，通過互動�
 # df = load_data(DATA_FILE)
 
 symbol = "^GSPC"  # S&P 500 ETF
-df = yf.download(symbol, start="2000-01-01")[['Open', 'Close']]
+df = yf.download(symbol, start="1990-01-01")[['Open', 'Close']]
 
 df.columns = df.columns.droplevel(1)  # 移除代碼層級 ('^GSPC')
 
